@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Match</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #e6ecf0, #b0c4de);
+            color: #333;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(5px);
+            max-width: 90vw;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        select, button {
+            padding: 10px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #4682b4;
+            color: #fff;
+            transition: background 0.3s ease;
+        }
+        select:hover, button:hover {
+            background: #5a9bd4;
+        }
+        .info {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 80px);
+            gap: 10px;
+            justify-content: center;
+        }
+        .card {
+            width: 80px;
+            height: 80px;
+            background: #f5f6f5;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            cursor: pointer;
+            transition: transform 0.3s ease, background 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .card.flipped {
+            transform: rotateY(180deg);
+            background: #2ecc71;
+        }
+        .card.matched {
+            background: #27ae60;
+            cursor: default;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 1em;
+            color: #2c3e50;
+        }
+        .footer a {
+            color: #4682b4;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .footer a:hover {
+            color: #5a9bd4;
+        }
+        .page-footer {
+            margin-top: 20px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            color: #2c3e50;
+        }
+        .page-footer a {
+            color: #4682b4;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .page-footer a:hover {
+            color: #5a9bd4;
+        }
+        :root {
+            --bg-color: linear-gradient(135deg, #e6ecf0, #b0c4de);
+            --card-bg: #f5f6f5;
+        }
+        [data-theme="dark"] {
+            --bg-color: linear-gradient(135deg, #2c3e50, #34495e);
+            --card-bg: #34495e;
+        }
+        [data-theme="pastel"] {
+            --bg-color: linear-gradient(135deg, #fce4ec, #d1c4e9);
+            --card-bg: #f8bbd0;
+        }
+        body {
+            background: var(--bg-color);
+        }
+        .card {
+            background: var(--card-bg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Memory Match</h1>
+        <div class="controls">
+            <select id="theme" onchange="changeTheme()">
+                <option value="light">Clair</option>
+                <option value="dark">Sombre</option>
+                <option value="pastel">Pastel</option>
+            </select>
+            <select id="difficulty" onchange="updateDifficulty()">
+                <option value="easy">Facile</option>
+                <option value="medium" selected>Moyen</option>
+                <option value="hard">Difficile</option>
+            </select>
+            <button onclick="startGame()">Nouveau jeu</button>
+        </div>
+        <div class="info">
+            <span>Score: <span id="score">0</span></span>
+            <span>Mouvements: <span id="moves">0</span></span>
+            <span>Meilleur score: <span id="best-score">0</span></span>
+        </div>
+        <div class="game-board" id="gameBoard"></div>
+        <div class="footer">
+            Créé par <a href="https://github.com/elryan7" target="_blank">elryan7</a>
+        </div>
+    </div>
+    <div class="page-footer">
+        <a href="https://github.com/elryan7" target="_blank">GitHub.com/elryan7</a>
+    </div>
+
+    <script>
+        const gameBoard = document.getElementById('gameBoard');
+        let cards = [];
+        let flippedCards = [];
+        let matchedCards = [];
+        let score = 0;
+        let moves = 0;
+        let bestScore = localStorage.getItem('bestScoreMemoryMatch') || 0;
+        let difficulty = 'medium';
+        const difficulties = {
+            easy: { rows: 4, cols: 4, pairs: 8 },
+            medium: { rows: 4, cols: 6, pairs: 12 },
+            hard: { rows: 6, cols: 6, pairs: 18 }
+        };
+        const symbols = ['😺', '🐶', '🐱', '🐶', '🦁', '🐻', '🦒', '🐘', '🦊', '🐼', '🐰', '🐨', '🐵', '🦝', '🐯', '🐷', '🐮', '🦄'];
+
+        document.getElementById('best-score').textContent = bestScore;
+
+        function startGame() {
+            cards = [];
+            flippedCards = [];
+            matchedCards = [];
+            score = 0;
+            moves = 0;
+            document.getElementById('score').textContent = score;
+            document.getElementById('moves').textContent = moves;
+            gameBoard.innerHTML = '';
+            gameBoard.style.gridTemplateColumns = `repeat(${difficulties[difficulty].cols}, 80px)`;
+
+            // Créer les cartes
+            let selectedSymbols = symbols.slice(0, difficulties[difficulty].pairs);
+            let cardValues = [...selectedSymbols, ...selectedSymbols];
+            cardValues.sort(() => Math.random() - 0.5);
+
+            cardValues.forEach((value, index) => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.value = value;
+                card.addEventListener('click', () => flipCard(card));
+                gameBoard.appendChild(card);
+            });
+            cards = Array.from(gameBoard.children);
+        }
+
+        function flipCard(card) {
+            if (flippedCards.length < 2 && !flippedCards.includes(card) && !matchedCards.includes(card)) {
+                card.classList.add('flipped');
+                card.textContent = card.dataset.value;
+                flippedCards.push(card);
+
+                if (flippedCards.length === 2) {
+                    moves++;
+                    document.getElementById('moves').textContent = moves;
+                    checkMatch();
+                }
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            if (card1.dataset.value === card2.dataset.value) {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedCards.push(card1, card2);
+                score += 100;
+                document.getElementById('score').textContent = score;
+                if (matchedCards.length === cards.length) {
+                    endGame();
+                }
+                flippedCards = [];
+            } else {
+                setTimeout(() => {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    card1.textContent = '';
+                    card2.textContent = '';
+                    flippedCards = [];
+                }, 1000);
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('bestScoreMemoryMatch', bestScore);
+                document.getElementById('best-score').textContent = bestScore;
+            }
+        }
+
+        function endGame() {
+            alert('Félicitations ! Score: ' + score);
+        }
+
+        function updateDifficulty() {
+            difficulty = document.getElementById('difficulty').value;
+            startGame();
+        }
+
+        function changeTheme() {
+            document.body.setAttribute('data-theme', document.getElementById('theme').value);
+        }
+
+        startGame();
+    </script>
+</body>
+</html>
